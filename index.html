@@ -103,226 +103,189 @@
             <div id="wellen-stroemung-result"></div>
         </div>
 
-     <script>
-    async function berechneWellenStroemung() {
-        const lat = document.getElementById('latitude').value || 54.544587;
-        const lon = document.getElementById('longitude').value || 10.227487;
-        const tiefe = parseFloat(document.getElementById('wassertiefe').value);
+        <!-- PDF speichern Button -->
+        <button onclick="saveAsPDF()">PDF speichern</button>
 
-        if (!tiefe) {
-            alert('Bitte eine Wassertiefe eingeben!');
-            return;
-        }
+        <script>
+            async function berechneWellenStroemung() {
+                const lat = document.getElementById('latitude').value || 54.544587;
+                const lon = document.getElementById('longitude').value || 10.227487;
+                const tiefe = parseFloat(document.getElementById('wassertiefe').value);
 
-        try {
-            // API-Anfrage an Open-Meteo
-            const response = await fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&daily=wave_height_max`);
-            if (!response.ok) throw new Error('Fehler beim Abrufen der Wellenhöhe');
-            
-            const data = await response.json();
-            const wellenhoehe = data.daily.wave_height_max[0]; // Nehme die heutige maximale Wellenhöhe
-
-            // Strömung wie bisher berechnen
-            const stroemungsstaerke = 0.3 * (wellenhoehe || 0) + 0.1 * tiefe;
-
-            document.getElementById('wellen-stroemung-result').style.display = 'block';
-            document.getElementById('wellen-stroemung-result').innerText =
-                `Wellenhöhe: ${wellenhoehe ? wellenhoehe.toFixed(2) : "Keine Daten"} m\nStrömung: ${stroemungsstaerke.toFixed(2)} Knoten`;
-        } catch (error) {
-            document.getElementById('wellen-stroemung-result').innerText = 'Fehler: ' + error.message;
-        }
-    }
-</script>
-
-        <!-- Button zum PDF speichern -->
-        <button onclick="saveAsPDF()">Daten als PDF speichern</button>
-    </div>
-
-    <script>
-        const apiKey = '4db9283324a61d252299927649bb85a6';
-        let map, marker, weatherData;
-
-        document.addEventListener('DOMContentLoaded', initializeMap);
-
-        function initializeMap() {
-            map = L.map('map').setView([51.1657, 10.4515], 6);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '© OpenStreetMap contributors'
-            }).addTo(map);
-
-            map.on('click', function (e) {
-                const { lat, lng } = e.latlng;
-                document.getElementById('latitude').value = lat.toFixed(4);
-                document.getElementById('longitude').value = lng.toFixed(4);
-
-                if (marker) {
-                    map.removeLayer(marker);
+                if (!tiefe) {
+                    alert('Bitte eine Wassertiefe eingeben!');
+                    return;
                 }
-                marker = L.marker([lat, lng]).addTo(map);
-            });
-        }
 
-        async function fetchWeatherData() {
-            const lat = document.getElementById('latitude').value || 51.1657;
-            const lon = document.getElementById('longitude').value || 10.4515;
+                try {
+                    const response = await fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&daily=wave_height_max`);
+                    if (!response.ok) throw new Error('Fehler beim Abrufen der Wellenhöhe');
+                    
+                    const data = await response.json();
+                    const wellenhoehe = data.daily.wave_height_max[0]; // Nehme die heutige maximale Wellenhöhe
 
-            try {
-                const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=de`);
-                if (!response.ok) throw new Error('Fehler beim Abrufen der Wetterdaten');
-                weatherData = await response.json();
+                    // Strömung wie bisher berechnen
+                    const stroemungsstaerke = 0.3 * (wellenhoehe || 0) + 0.1 * tiefe;
 
-                const windDirection = getWindDirection(weatherData.wind.deg);
-
-                document.getElementById('weather-info').style.display = 'block';
-                document.getElementById('weather-info').innerHTML = `
-                    <b>Temperatur:</b> ${weatherData.main.temp}°C<br>
-                    <b>Wetter:</b> ${weatherData.weather[0].description}<br>
-                    <b>Windgeschwindigkeit:</b> ${weatherData.wind.speed} m/s<br>
-                    <b>Windrichtung:</b> ${windDirection} (${weatherData.wind.deg}°)
-                `;
-            } catch (error) {
-                document.getElementById('weather-info').innerText = 'Fehler: ' + error.message;
-            }
-        }
-
-        function getWindDirection(deg) {
-            if (deg >= 0 && deg < 22.5) return "N";
-            if (deg >= 22.5 && deg < 67.5) return "NO";
-            if (deg >= 67.5 && deg < 112.5) return "O";
-            if (deg >= 112.5 && deg < 157.5) return "SO";
-            if (deg >= 157.5 && deg < 202.5) return "S";
-            if (deg >= 202.5 && deg < 247.5) return "SW";
-            if (deg >= 247.5 && deg < 292.5) return "W";
-            if (deg >= 292.5 && deg < 337.5) return "NW";
-            return "N"; // Standardwert
-        }
-
-        function erstelleTaucherEingaben() {
-            const anzahlTaucher = parseInt(document.getElementById('taucher-anzahl').value);
-            const taucherContainer = document.getElementById('taucher-eingaben');
-            taucherContainer.innerHTML = '';
-
-            for (let i = 1; i <= anzahlTaucher; i++) {
-                taucherContainer.innerHTML += `
-                    <label for="luftverbrauch-${i}">Luftverbrauch pro Minute für Taucher ${i} (L):</label>
-                    <input type="number" id="luftverbrauch-${i}" step="0.1">
-                `;
-            }
-        }
-
-        function berechneLuftverbrauch() {
-            const anzahlTaucher = parseInt(document.getElementById('taucher-anzahl').value);
-            const dauer = parseFloat(document.getElementById('tauchzeit').value);
-            const tiefe = parseFloat(document.getElementById('tauchtiefe').value);
-
-            if (!anzahlTaucher || !dauer || !tiefe) {
-                alert('Bitte alle Felder ausfüllen.');
-                return;
+                    document.getElementById('wellen-stroemung-result').style.display = 'block';
+                    document.getElementById('wellen-stroemung-result').innerText =
+                        `Wellenhöhe: ${wellenhoehe ? wellenhoehe.toFixed(2) : "Keine Daten"} m\nStrömung: ${stroemungsstaerke.toFixed(2)} Knoten`;
+                } catch (error) {
+                    document.getElementById('wellen-stroemung-result').innerText = 'Fehler: ' + error.message;
+                }
             }
 
-            const luftdichte = (tiefe / 10) + 1; // Umgebungsdruck in bar
+            const apiKey = '4db9283324a61d252299927649bb85a6';
+            let map, marker, weatherData;
 
-            let gesamtverbrauch = 0;
-            let ergebnisText = 'Luftverbrauch pro Taucher:\n';
+            document.addEventListener('DOMContentLoaded', initializeMap);
 
-            for (let i = 1; i <= anzahlTaucher; i++) {
-                const verbrauchProMinute = parseFloat(document.getElementById(`luftverbrauch-${i}`).value);
-                const verbrauchProTaucher = verbrauchProMinute * luftdichte * dauer;
-                gesamtverbrauch += verbrauchProTaucher;
-                ergebnisText += `Taucher ${i}: ${verbrauchProTaucher.toFixed(2)} Liter\n`;
+            function initializeMap() {
+                map = L.map('map').setView([51.1657, 10.4515], 6);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(map);
+
+                map.on('click', function (e) {
+                    const { lat, lng } = e.latlng;
+                    document.getElementById('latitude').value = lat.toFixed(4);
+                    document.getElementById('longitude').value = lng.toFixed(4);
+
+                    if (marker) {
+                        map.removeLayer(marker);
+                    }
+                    marker = L.marker([lat, lng]).addTo(map);
+                });
             }
 
-            ergebnisText += `\nGesamter Luftverbrauch: ${gesamtverbrauch.toFixed(2)} Liter`;
+            async function fetchWeatherData() {
+                const lat = document.getElementById('latitude').value || 51.1657;
+                const lon = document.getElementById('longitude').value || 10.4515;
 
-            document.getElementById('luftverbrauch-result').style.display = 'block';
-            document.getElementById('luftverbrauch-result').innerText = ergebnisText;
-        }
+                try {
+                    const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=de`);
+                    if (!response.ok) throw new Error('Fehler beim Abrufen der Wetterdaten');
+                    weatherData = await response.json();
 
-        function berechneWellenStroemung() {
-            if (!weatherData) {
-                alert('Bitte zuerst die Wetterdaten abrufen!');
-                return;
+                    const windDirection = getWindDirection(weatherData.wind.deg);
+
+                    document.getElementById('weather-info').style.display = 'block';
+                    document.getElementById('weather-info').innerHTML = 
+                        `<b>Temperatur:</b> ${weatherData.main.temp}°C<br>
+                        <b>Wetter:</b> ${weatherData.weather[0].description}<br>
+                        <b>Windgeschwindigkeit:</b> ${weatherData.wind.speed} m/s<br>
+                        <b>Windrichtung:</b> ${windDirection} (${weatherData.wind.deg}°)`;
+                } catch (error) {
+                    document.getElementById('weather-info').innerText = 'Fehler: ' + error.message;
+                }
             }
 
-            const wind = weatherData.wind.speed; // Windgeschwindigkeit aus Wetterdaten
-            const tiefe = parseFloat(document.getElementById('wassertiefe').value);
-
-            if (!tiefe || !wind) {
-                alert('Bitte sowohl Windgeschwindigkeit als auch Wassertiefe eingeben!');
-                return;
+            function getWindDirection(deg) {
+                if (deg >= 0 && deg < 22.5) return "N";
+                if (deg >= 22.5 && deg < 67.5) return "NO";
+                if (deg >= 67.5 && deg < 112.5) return "O";
+                if (deg >= 112.5 && deg < 157.5) return "SO";
+                if (deg >= 157.5 && deg < 202.5) return "S";
+                if (deg >= 202.5 && deg < 247.5) return "SW";
+                if (deg >= 247.5 && deg < 292.5) return "W";
+                if (deg >= 292.5 && deg < 337.5) return "NW";
+                return "N"; // Standardwert
             }
 
-            const wellenhoehe = 0.1 * wind + 0.2 * tiefe;
-            const stroemungsstaerke = 0.3 * wind + 0.1 * tiefe;
+            function erstelleTaucherEingaben() {
+                const anzahlTaucher = parseInt(document.getElementById('taucher-anzahl').value);
+                const taucherContainer = document.getElementById('taucher-eingaben');
+                taucherContainer.innerHTML = '';
 
-            document.getElementById('wellen-stroemung-result').style.display = 'block';
-            document.getElementById('wellen-stroemung-result').innerText =
-                `Wellenhöhe: ${wellenhoehe.toFixed(2)}m\nStrömung: ${stroemungsstaerke.toFixed(2)} Knoten`;
-        }
-
-
-        async function berechneWellenStroemung() {
-            const lat = document.getElementById('latitude').value || 54.544587;
-            const lon = document.getElementById('longitude').value || 10.227487;
-            const tiefe = parseFloat(document.getElementById('wassertiefe').value);
-
-            if (!tiefe) {
-                alert('Bitte eine Wassertiefe eingeben!');
-                return;
+                for (let i = 1; i <= anzahlTaucher; i++) {
+                    taucherContainer.innerHTML += 
+                        `<label for="luftverbrauch-${i}">Luftverbrauch pro Minute für Taucher ${i} (L):</label>
+                        <input type="number" id="luftverbrauch-${i}" step="0.1">
+                        <label for="gasart-${i}">Atemgas:</label>
+                        <select id="gasart-${i}">
+                            <option value="luft">Luft</option>
+                            <option value="nitrox32">Nitrox 32%</option>
+                            <option value="nitrox36">Nitrox 36%</option>
+                            <option value="trimix">Trimix</option>
+                        </select>`;
+                }
             }
 
-            try {
-                const response = await fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&daily=wave_height_max`);
-                if (!response.ok) throw new Error('Fehler beim Abrufen der Wellenhöhe');
-                
-                const data = await response.json();
-                const wellenhoehe = data.daily.wave_height_max[0]; // Nehme die heutige maximale Wellenhöhe
+            function berechneLuftverbrauch() {
+                const anzahlTaucher = parseInt(document.getElementById('taucher-anzahl').value);
+                const dauer = parseFloat(document.getElementById('tauchzeit').value);
+                const tiefe = parseFloat(document.getElementById('tauchtiefe').value);
 
-                const stroemungsstaerke = 0.3 * (wellenhoehe || 0) + 0.1 * tiefe;
+                if (!anzahlTaucher || !dauer || !tiefe) {
+                    alert('Bitte alle Felder ausfüllen.');
+                    return;
+                }
 
-                document.getElementById('wellen-stroemung-result').style.display = 'block';
-                document.getElementById('wellen-stroemung-result').innerText =
-                    `Wellenhöhe: ${wellenhoehe ? wellenhoehe.toFixed(2) : "Keine Daten"} m\nStrömung: ${stroemungsstaerke.toFixed(2)} Knoten`;
-            } catch (error) {
-                document.getElementById('wellen-stroemung-result').innerText = 'Fehler: ' + error.message;
+                const luftdichte = (tiefe / 10) + 1; // Umgebungsdruck in bar
+                let gesamtverbrauch = 0;
+                let ergebnisText = 'Atemgasverbrauch pro Taucher:\n';
+
+                for (let i = 1; i <= anzahlTaucher; i++) {
+                    const verbrauchProMinute = parseFloat(document.getElementById(`luftverbrauch-${i}`).value);
+                    const gasart = document.getElementById(`gasart-${i}`).value;
+                    let gasFaktor = 1;
+
+                    if (gasart === "nitrox32") gasFaktor = 0.9;
+                    if (gasart === "nitrox36") gasFaktor = 0.85;
+                    if (gasart === "trimix") gasFaktor = 0.75;
+
+                    if (isNaN(verbrauchProMinute) || verbrauchProMinute <= 0) {
+                        alert(`Bitte gültigen Atemgasverbrauch für Taucher ${i} eingeben.`);
+                        return;
+                    }
+
+                    const verbrauchProTaucher = verbrauchProMinute * luftdichte * dauer * gasFaktor;
+                    gesamtverbrauch += verbrauchProTaucher;
+                    ergebnisText += `Taucher ${i} (${gasart}): ${verbrauchProTaucher.toFixed(2)} Liter\n`;
+                }
+
+                ergebnisText += `\nGesamter Atemgasverbrauch: ${gesamtverbrauch.toFixed(2)} Liter`;
+
+                document.getElementById('luftverbrauch-result').style.display = 'block';
+                document.getElementById('luftverbrauch-result').innerText = ergebnisText;
             }
-        }
 
-        function saveAsPDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+            function saveAsPDF() {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
 
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(16);
-            doc.text('Forschungstauchgang Planer', 10, 10);
-            doc.line(10, 12, 200, 12);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(16);
+                doc.text('Forschungstauchgang Planer', 10, 10);
+                doc.line(10, 12, 200, 12);
 
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(12);
-            doc.text(`Breitengrad: ${document.getElementById('latitude').value}`, 10, 20);
-            doc.text(`Längengrad: ${document.getElementById('longitude').value}`, 10, 30);
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(12);
+                doc.text(`Breitengrad: ${document.getElementById('latitude').value}`, 10, 20);
+                doc.text(`Längengrad: ${document.getElementById('longitude').value}`, 10, 30);
 
-            const weatherText = document.getElementById('weather-info').innerText || 'Keine Wetterdaten verfügbar.';
-            doc.setFont('helvetica', 'bold');
-            doc.text('Wettertbedingungen', 10, 40);
-            doc.setFont('helvetica', 'normal');
-            doc.text(`Wetter: ${weatherText}`, 10, 47);
+                const weatherText = document.getElementById('weather-info').innerText || 'Keine Wetterdaten verfügbar.';
+                doc.setFont('helvetica', 'bold');
+                doc.text('Wetterbedingungen', 10, 40);
+                doc.setFont('helvetica', 'normal');
+                doc.text(`Wetter: ${weatherText}`, 10, 47);
 
-            const luftverbrauchText = document.getElementById('luftverbrauch-result').innerText || 'Kein Luftverbrauch berechnet.';
-            doc.setFont('helvetica', 'bold');
-            doc.text('Luftverbrauch', 93, 20);
-            doc.setFont('helvetica', 'normal');
-            doc.text(`Luftverbrauch: ${luftverbrauchText}`, 93, 27);
+                const luftverbrauchText = document.getElementById('luftverbrauch-result').innerText || 'Kein Luftverbrauch berechnet.';
+                doc.setFont('helvetica', 'bold');
+                doc.text('Luftverbrauch', 90, 20);
+                doc.setFont('helvetica', 'normal');
+                doc.text(`${luftverbrauchText}`, 90, 27);
 
-            const wellenText = document.getElementById('wellen-stroemung-result').innerText || 'Keine Wellen- und Strömungsdaten verfügbar.';
-            doc.setFont('helvetica', 'bold');
-            doc.text('Wellen & Strömung', 10, 75);
-            doc.setFont('helvetica', 'normal');
-            doc.text(`Wellen & Strömung: ${wellenText}`, 10, 82);
+                const wellenText = document.getElementById('wellen-stroemung-result').innerText || 'Keine Wellen- und Strömungsdaten verfügbar.';
+                doc.setFont('helvetica', 'bold');
+                doc.text('Wellen & Strömung', 10, 80);
+                doc.setFont('helvetica', 'normal');
+                doc.text(`${wellenText}`, 10, 87);
 
-            doc.save('forschungstauchgang_planer.pdf');
-        }
-    </script>
+                doc.save('tauchgang-bericht.pdf');
+            }
+        </script>
+    </div>
 </body>
 </html>
