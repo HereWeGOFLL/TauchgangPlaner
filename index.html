@@ -108,6 +108,19 @@
             <button onclick="berechneWellenStroemung()">Wellen & Strömung berechnen</button>
             <div id="wellen-stroemung-result"></div>
         </div>
+  
+                <!-- Bilder hochladen -->
+        <div class="section">
+            <h2>📷 Welche Tiere hast du gesehen? - Hier kannst du Bilder hochladen</h2>
+            <input type="file" id="imageUpload" accept="image/*" multiple>
+            <div id="imagePreview"></div>
+        </div>
+
+        <!-- Notizen hinzufügen -->
+        <div class="section">
+            <h2>📝 Hier ist noch Platz für Notizen</h2>
+            <textarea id="notes" rows="5"></textarea>
+        </div>
 
         <!-- PDF speichern Button -->
         <button onclick="saveAsPDF()">PDF speichern</button>
@@ -235,6 +248,27 @@ function getGermanName(scientificName) {
     return nameMapping[scientificName] || scientificName;
 }
 
+ let uploadedImages = [];
+
+            document.getElementById('imageUpload').addEventListener('change', function(event) {
+                const files = event.target.files;
+                uploadedImages = [];
+                document.getElementById('imagePreview').innerHTML = '';
+
+                Array.from(files).forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        uploadedImages.push(e.target.result);
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.style.width = '100px';
+                        img.style.margin = '5px';
+                        document.getElementById('imagePreview').appendChild(img);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            });
+
             async function fetchWeatherData() {
                 const lat = document.getElementById('latitude').value || 51.1657;
                 const lon = document.getElementById('longitude').value || 10.4515;
@@ -326,16 +360,6 @@ function getGermanName(scientificName) {
                 document.getElementById('luftverbrauch-result').style.display = 'block';
                 document.getElementById('luftverbrauch-result').innerText = ergebnisText;
             }
-        function saveAsPDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            doc.text('Forschungstauchgang Planer', 10, 10);
-            doc.text(`Breitengrad: ${document.getElementById('latitude').value}`, 10, 20);
-            doc.text(`Längengrad: ${document.getElementById('longitude').value}`, 10, 30);
-            doc.text(`Wetter: ${document.getElementById('weather-info').innerText}`, 10, 40);
-            doc.save('tauchgang-bericht.pdf');
-        }
-      
             function saveAsPDF() {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
@@ -350,26 +374,46 @@ function getGermanName(scientificName) {
                 doc.text(`Breitengrad: ${document.getElementById('latitude').value}`, 10, 20);
                 doc.text(`Längengrad: ${document.getElementById('longitude').value}`, 10, 30);
 
-                const weatherText = document.getElementById('weather-info').innerText || 'Keine Wetterdaten verfügbar.';
+                // Tiere Überschrift
                 doc.setFont('helvetica', 'bold');
-                doc.text('Wetterbedingungen', 10, 40);
+                doc.setFontSize(14);
+                doc.text('Tiere', 10, 40);
                 doc.setFont('helvetica', 'normal');
-                doc.text(`Wetter: ${weatherText}`, 10, 47);
 
-                const luftverbrauchText = document.getElementById('luftverbrauch-result').innerText || 'Kein Luftverbrauch berechnet.';
-                doc.setFont('helvetica', 'bold');
-                doc.text('Luftverbrauch', 90, 20);
-                doc.setFont('helvetica', 'normal');
-                doc.text(`${luftverbrauchText}`, 90, 27);
+                let yOffset = 50;
+                uploadedImages.forEach((image, index) => {
+                    if (yOffset > 250) {  // Neue Seite, wenn Platz voll ist
+                        doc.addPage();
+                        yOffset = 20;
+                    }
+                    doc.addImage(image, 'JPEG', 10, yOffset, 50, 50);
+                    yOffset += 60;
+                });
 
-                const wellenText = document.getElementById('wellen-stroemung-result').innerText || 'Keine Wellen- und Strömungsdaten verfügbar.';
+                // Notizen hinzufügen
+                yOffset += 10;
+                if (yOffset > 250) {
+                    doc.addPage();
+                    yOffset = 20;
+                }
                 doc.setFont('helvetica', 'bold');
-                doc.text('Wellen & Strömung', 10, 80);
+                doc.text('Notizen:', 10, yOffset);
                 doc.setFont('helvetica', 'normal');
-                doc.text(`${wellenText}`, 10, 87);
+
+                let notes = document.getElementById('notes').value.split("\n");
+                yOffset += 10;
+                notes.forEach(line => {
+                    if (yOffset > 280) {
+                        doc.addPage();
+                        yOffset = 20;
+                    }
+                    doc.text(`- ${line}`, 10, yOffset);
+                    yOffset += 10;
+                });
 
                 doc.save('tauchgang-bericht.pdf');
             }
+
         </script>
     </div>
 </body>
