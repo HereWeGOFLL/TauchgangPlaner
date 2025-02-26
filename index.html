@@ -360,59 +360,100 @@ function getGermanName(scientificName) {
                 document.getElementById('luftverbrauch-result').style.display = 'block';
                 document.getElementById('luftverbrauch-result').innerText = ergebnisText;
             }
-            function saveAsPDF() {
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF();
+           function saveAsPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
 
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(16);
-                doc.text('Forschungstauchgang Planer', 10, 10);
-                doc.line(10, 12, 200, 12);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.text('Forschungstauchgang Planer', 10, 10);
+    doc.line(10, 12, 200, 12);
 
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(12);
-                doc.text(`Breitengrad: ${document.getElementById('latitude').value}`, 10, 20);
-                doc.text(`Längengrad: ${document.getElementById('longitude').value}`, 10, 30);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(12);
+    
+    // Standortdaten
+    doc.text(`Breitengrad: ${document.getElementById('latitude').value}`, 10, 20);
+    doc.text(`Längengrad: ${document.getElementById('longitude').value}`, 10, 30);
 
-                // Tiere Überschrift
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(14);
-                doc.text('Tiere', 10, 40);
-                doc.setFont('helvetica', 'normal');
+    let yOffset = 40;
 
-                let yOffset = 50;
-                uploadedImages.forEach((image, index) => {
-                    if (yOffset > 250) {  // Neue Seite, wenn Platz voll ist
-                        doc.addPage();
-                        yOffset = 20;
-                    }
-                    doc.addImage(image, 'JPEG', 10, yOffset, 50, 50);
-                    yOffset += 60;
-                });
+    // Wetterdaten hinzufügen
+    const weatherInfo = document.getElementById('weather-info').innerText;
+    if (weatherInfo) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('Wetterbedingungen:', 10, yOffset);
+        doc.setFont('helvetica', 'normal');
+        doc.text(weatherInfo, 10, yOffset + 10);
+        yOffset += 30;
+    }
 
-                // Notizen hinzufügen
-                yOffset += 10;
-                if (yOffset > 250) {
-                    doc.addPage();
-                    yOffset = 20;
-                }
-                doc.setFont('helvetica', 'bold');
-                doc.text('Notizen:', 10, yOffset);
-                doc.setFont('helvetica', 'normal');
+    // Meerestiere hinzufügen
+    const animalInfo = document.getElementById('animal-info').innerText;
+    if (animalInfo) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('Meerestiere in der Nähe:', 10, yOffset);
+        doc.setFont('helvetica', 'normal');
+        doc.text(animalInfo, 10, yOffset + 10);
+        yOffset += 40;
+    }
 
-                let notes = document.getElementById('notes').value.split("\n");
-                yOffset += 10;
-                notes.forEach(line => {
-                    if (yOffset > 280) {
-                        doc.addPage();
-                        yOffset = 20;
-                    }
-                    doc.text(`- ${line}`, 10, yOffset);
-                    yOffset += 10;
-                });
+    // Luftverbrauchsergebnisse hinzufügen
+    const luftverbrauchResult = document.getElementById('luftverbrauch-result').innerText;
+    if (luftverbrauchResult) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('Luftverbrauch Berechnung:', 10, yOffset);
+        doc.setFont('helvetica', 'normal');
+        doc.text(luftverbrauchResult, 10, yOffset + 10);
+        yOffset += 40;
+    }
 
-                doc.save('tauchgang-bericht.pdf');
+    // Wellen & Strömung hinzufügen
+    const wellenStroemungResult = document.getElementById('wellen-stroemung-result').innerText;
+    if (wellenStroemungResult) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('Wellen & Strömung:', 10, yOffset);
+        doc.setFont('helvetica', 'normal');
+        doc.text(wellenStroemungResult, 10, yOffset + 10);
+        yOffset += 40;
+    }
+
+    // Notizen hinzufügen
+    const notes = document.getElementById('notes').value.split("\n");
+    if (notes.length > 0) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('Notizen:', 10, yOffset);
+        doc.setFont('helvetica', 'normal');
+        yOffset += 10;
+        notes.forEach(line => {
+            if (yOffset > 280) {
+                doc.addPage();
+                yOffset = 20;
             }
+            doc.text(`- ${line}`, 10, yOffset);
+            yOffset += 10;
+        });
+    }
+
+    // Bilder hinzufügen
+    if (uploadedImages.length > 0) {
+        yOffset += 10;
+        doc.setFont('helvetica', 'bold');
+        doc.text('Hochgeladene Bilder:', 10, yOffset);
+        yOffset += 10;
+
+        uploadedImages.forEach(image => {
+            if (yOffset > 250) {
+                doc.addPage();
+                yOffset = 20;
+            }
+            doc.addImage(image, 'JPEG', 10, yOffset, 50, 50);
+            yOffset += 60;
+        });
+    }
+
+    doc.save('tauchgang-bericht.pdf');
+}
 
         </script>
     </div>
