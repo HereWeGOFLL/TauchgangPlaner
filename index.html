@@ -59,6 +59,11 @@
     <div class="container">
         <h1>Forschungstauchgang Planer</h1>
 
+            <!-- Eingabefeld für das Datum des Tauchgangs -->
+        <label for="date">Tauchgangsdatum:</label>
+            <input type="date" id="date">
+        <button onclick="startPlanner()">Planung starten</button>
+
         <!-- Karte -->
         <div id="map" class="section"></div>
 
@@ -126,6 +131,17 @@
         <button onclick="saveAsPDF()">PDF speichern</button>
 
         <script>
+                 function startPlanner() {
+        const date = document.getElementById("date").value;
+        
+        if (date) {
+            // Wenn das Datum eingegeben wurde, zeige die Planungstabelle
+            document.getElementById("planningTable").style.display = "table";
+        } else {
+            // Wenn kein Datum eingegeben wurde, verstecke die Planungstabelle
+            document.getElementById("planningTable").style.display = "none";
+        }
+    }
             async function berechneWellenStroemung() {
                 const lat = document.getElementById('latitude').value || 54.544587;
                 const lon = document.getElementById('longitude').value || 10.227487;
@@ -360,7 +376,7 @@ function getGermanName(scientificName) {
                 document.getElementById('luftverbrauch-result').style.display = 'block';
                 document.getElementById('luftverbrauch-result').innerText = ergebnisText;
             }
-           function saveAsPDF() {
+          function saveAsPDF() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
@@ -371,54 +387,62 @@ function getGermanName(scientificName) {
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(12);
-    
-    // Standortdaten
-    doc.text(`Breitengrad: ${document.getElementById('latitude').value}`, 10, 20);
-    doc.text(`Längengrad: ${document.getElementById('longitude').value}`, 10, 30);
 
-    let yOffset = 40;
+    let yOffset = 20;
 
-    // Wetterdaten hinzufügen
+    // Standortdaten als Block anzeigen
+    doc.setFont('helvetica', 'bold');
+    doc.text('Standortdaten:', 10, yOffset);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Breitengrad: ${document.getElementById('latitude').value}`, 10, yOffset + 10);
+    doc.text(`Längengrad: ${document.getElementById('longitude').value}`, 10, yOffset + 20);
+    yOffset += 30;
+
+    // Wetterbedingungen
     const weatherInfo = document.getElementById('weather-info').innerText;
     if (weatherInfo) {
         doc.setFont('helvetica', 'bold');
         doc.text('Wetterbedingungen:', 10, yOffset);
         doc.setFont('helvetica', 'normal');
-        doc.text(weatherInfo, 10, yOffset + 10);
-        yOffset += 30;
+        let lines = doc.splitTextToSize(weatherInfo, 180);
+        doc.text(lines, 10, yOffset + 10);
+        yOffset += lines.length * 7 + 10;
     }
 
-    // Meerestiere hinzufügen
+    // Meerestiere
     const animalInfo = document.getElementById('animal-info').innerText;
     if (animalInfo) {
         doc.setFont('helvetica', 'bold');
         doc.text('Meerestiere in der Nähe:', 10, yOffset);
         doc.setFont('helvetica', 'normal');
-        doc.text(animalInfo, 10, yOffset + 10);
-        yOffset += 40;
+        let lines = doc.splitTextToSize(animalInfo, 180);
+        doc.text(lines, 10, yOffset + 10);
+        yOffset += lines.length * 7 + 10;
     }
 
-    // Luftverbrauchsergebnisse hinzufügen
+    // Luftverbrauch
     const luftverbrauchResult = document.getElementById('luftverbrauch-result').innerText;
     if (luftverbrauchResult) {
         doc.setFont('helvetica', 'bold');
         doc.text('Luftverbrauch Berechnung:', 10, yOffset);
         doc.setFont('helvetica', 'normal');
-        doc.text(luftverbrauchResult, 10, yOffset + 10);
-        yOffset += 40;
+        let lines = doc.splitTextToSize(luftverbrauchResult, 180);
+        doc.text(lines, 10, yOffset + 10);
+        yOffset += lines.length * 7 + 10;
     }
 
-    // Wellen & Strömung hinzufügen
+    // Wellen & Strömung
     const wellenStroemungResult = document.getElementById('wellen-stroemung-result').innerText;
     if (wellenStroemungResult) {
         doc.setFont('helvetica', 'bold');
         doc.text('Wellen & Strömung:', 10, yOffset);
         doc.setFont('helvetica', 'normal');
-        doc.text(wellenStroemungResult, 10, yOffset + 10);
-        yOffset += 40;
+        let lines = doc.splitTextToSize(wellenStroemungResult, 180);
+        doc.text(lines, 10, yOffset + 10);
+        yOffset += lines.length * 7 + 10;
     }
 
-    // Notizen hinzufügen
+    // Notizen
     const notes = document.getElementById('notes').value.split("\n");
     if (notes.length > 0) {
         doc.setFont('helvetica', 'bold');
@@ -431,11 +455,11 @@ function getGermanName(scientificName) {
                 yOffset = 20;
             }
             doc.text(`- ${line}`, 10, yOffset);
-            yOffset += 10;
+            yOffset += 7;
         });
     }
 
-    // Bilder hinzufügen
+    // Bilder
     if (uploadedImages.length > 0) {
         yOffset += 10;
         doc.setFont('helvetica', 'bold');
